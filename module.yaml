@@ -1,1 +1,10 @@
 product: jvm/app
+
+settings:
+  kotlin:
+    languageVersion: 2.0
+  jvm:
+    release: 21
+
+dependencies:
+  - org.apache.kafka:kafka-clients:3.7.0
