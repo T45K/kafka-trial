@@ -1,3 +1,5 @@
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.Producer
@@ -11,7 +13,7 @@ import kotlin.time.toJavaDuration
 
 private const val KAFKA_BOOTSTRAP_SERVER = "localhost:9092"
 
-fun main() {
+suspend fun main() = coroutineScope {
     val producerProps = mapOf(
         "bootstrap.servers" to KAFKA_BOOTSTRAP_SERVER,
         "key.serializer" to "org.apache.kafka.common.serialization.StringSerializer",
@@ -19,8 +21,12 @@ fun main() {
         "security.protocol" to "PLAINTEXT"
     )
 
-    KafkaProducer<String, ByteArray>(producerProps).use {
-        it.send(ProducerRecord("test", "1", "Hello, world!".encodeToByteArray()))
+    launch {
+        generateSequence(1) { it + 1 }.forEach { count ->
+            KafkaProducer<String, ByteArray>(producerProps).use {
+                it.asyncSend(ProducerRecord("test", "1", "Hello, world $count!".encodeToByteArray()))
+            } // Message will be sent when KafkaProducer is closed
+        }
     }
 
     val consumerProps = mapOf(
@@ -34,12 +40,14 @@ fun main() {
 
     KafkaConsumer<String, ByteArray>(consumerProps).use { consumer ->
         consumer.subscribe(listOf("test"))
-        val message = repeatUntilSome {
-            consumer.poll(400.milliseconds.toJavaDuration())
-                .map { String(it.value()) }
-                .firstOrNull()
+        while (true) {
+            val message = repeatUntilSome {
+                consumer.poll(400.milliseconds.toJavaDuration())
+                    .map { String(it.value()) }
+                    .firstOrNull()
+            }
+            println(message)
         }
-        println(message)
     }
 }
 

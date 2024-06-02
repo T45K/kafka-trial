@@ -8,3 +8,4 @@ settings:
 
 dependencies:
   - org.apache.kafka:kafka-clients:3.7.0
+  - org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0-RC
